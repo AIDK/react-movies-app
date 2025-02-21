@@ -1,5 +1,6 @@
 import Search from "./components/Search.jsx";
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
+import { useDebounce } from "react-use";
 import Spinner from "./components/Spinner.jsx";
 import MovieCard from "./components/MovieCard.jsx";
 
@@ -18,15 +19,22 @@ const App = () => {
     const [errorMessage, setErrorMessage] = useState("")
     const [movies, setMovies] = useState([])
     const [isLoading, setIsLoading] = useState(false)
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-    const fetchMovies = async () => {
+    // we don't want to overload the API so we can debounce the search term
+    // to prevent making too many calls (should prevent 'too many requests' error)
+    useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
+
+    const fetchMovies = async (query = "") => {
 
         setIsLoading(true)
         setErrorMessage("")
 
         try {
+            const endpoint = query
+                ? `${API_BASE_URL}/search/movie?query=${encodeURI(query)}`
+                : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
 
-            const endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
             const response = await fetch(endpoint, API_OPTIONS);
             if (!response.ok) {
                 throw new Error("Failed to fetch movies");
@@ -53,8 +61,8 @@ const App = () => {
 
     // this will only run once because of the empty dependency array
     useEffect(() => {
-        fetchMovies()
-    },[])
+        fetchMovies(debouncedSearchTerm)
+    },[debouncedSearchTerm])
 
     return (
         <main>
