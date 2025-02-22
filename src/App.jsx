@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useDebounce } from "react-use";
 import Spinner from "./components/Spinner.jsx";
 import MovieCard from "./components/MovieCard.jsx";
+import {getTrendingMovies, updateSearchCount} from "./appwrite.js";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -18,6 +19,7 @@ const App = () => {
     const [searchTerm, setSearchTerm] = useState("")
     const [errorMessage, setErrorMessage] = useState("")
     const [movies, setMovies] = useState([])
+    const [trendingMovies, setTrendingMovies] = useState([])
     const [isLoading, setIsLoading] = useState(false)
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
@@ -51,6 +53,11 @@ const App = () => {
             // show movies
             setMovies(data.results || [])
 
+            // log search for 'trending' feature
+            if (query && data.results.length > 0){
+                await updateSearchCount(query, data.results[0]);
+            }
+
         } catch (error){
             console.log(`Error fetching movies: ${error}`)
             setErrorMessage("Error fetching movies. Please try again later.")
@@ -59,22 +66,56 @@ const App = () => {
         }
     }
 
-    // this will only run once because of the empty dependency array
+    const loadTrendingMovies = async () => {
+        try {
+
+            const movies = await getTrendingMovies();
+            setTrendingMovies(movies);
+
+        } catch (e) {
+            console.log(`Error fetching trending movies: ${e}`);
+        }
+    }
+
+    // this will run every time the user searches for a movie (using debounce)
     useEffect(() => {
         fetchMovies(debouncedSearchTerm)
     },[debouncedSearchTerm])
+
+    // load the trending movies on start (top 5)
+    useEffect(() => {
+        loadTrendingMovies();
+    },[])
 
     return (
         <main>
             <div className={"pattern"}/>
             <div className={"wrapper"}>
                 <header>
+                    <div className={"content-center"}><img className={"size-16"} src={"./logo.png"} alt={"Logo"}/></div>
                     <img src={"./hero.png"} alt={"Hero Banner"}/>
                     <h1>Find <span className={"text-gradient"}>Movies</span> You'll Enjoy Without the Hassle</h1>
                     <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
                 </header>
+
+                {/* Trending Movies */}
+                {trendingMovies.length > 0 && (
+                    <section className={"trending"}>
+                        <h2>Trending Movies</h2>
+                        <ul>
+                            {trendingMovies.map((movie, index) => (
+                                <li key={movie.$id}>
+                                    <p>{index + 1}</p>
+                                    <img src={movie.poster_url} alt={movie.title}/>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
+                {/* All Movies */}
                 <section className={"all-movies"}>
-                    <h2 className={"mt-[20px]"}>All Movies</h2>
+                    <h2>All Movies</h2>
 
                     {isLoading ? (
                         // we're loading
