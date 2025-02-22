@@ -30,11 +30,26 @@ export const updateSearchCount = async(searchTerm, movie) => {
                 searchTerm: searchTerm,
                 count: 1,
                 movie_id: movie.id,
-                poster_url: `https://image.tmdb.org/t/p/w500${movie.poster_url}`,
+                poster_url: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
             })
         }
 
     } catch (error) {
        console.log(`Error updating search term: ${error}`)
+    }
+}
+
+export const getTrendingMovies = async() => {
+    try {
+        //TODO: get top 5 trending searches
+        const result = await database.listDocuments(DATABASE_ID, COLLECTION_ID, [
+            Query.limit(5),
+            Query.orderDesc("count")
+        ])
+
+        return result.documents;
+
+    } catch (e) {
+       console.log(e)
     }
 }
